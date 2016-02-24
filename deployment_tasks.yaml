@@ -1,0 +1,45 @@
+# These tasks will be merged into deployment graph. Here you
+# can specify new tasks for any roles, even built-in ones.
+
+- id: openstack-network
+  type: skipped
+
+- id: ext-net-vlan-openstack-network
+  type: puppet
+  groups: [primary-controller, controller]
+  required_for: [deploy_end]
+  requires: [openstack-controller]
+  parameters:
+    puppet_manifest: "puppet/manifests/openstack-network-controller.pp"
+    puppet_modules: "/etc/puppet/modules"
+    timeout: 3600
+
+- id: ext-net-vlan-configure-ml2-controller
+  type: puppet
+  role: [primary-controller, controller]
+  required_for: [ext-net-vlan-configure-l3-controller]
+  requires: [post_deployment_start]
+  parameters:
+    puppet_manifest: "puppet/manifests/configure-ml2-controller.pp"
+    puppet_modules: "puppet/modules:/etc/puppet/modules"
+    timeout: 300
+
+- id: ext-net-vlan-configure-l3-controller
+  type: puppet
+  role: [primary-controller, controller]
+  required_for: [ext-net-vlan-create-floating-network,post_deployment_end]
+  requires: [ext-net-vlan-configure-ml2-controller]
+  parameters:
+    puppet_manifest: "puppet/manifests/configure-l3-controller.pp"
+    puppet_modules: "/etc/puppet/modules"
+    timeout: 300
+
+- id: ext-net-vlan-create-floating-network
+  type: puppet
+  role: [primary-controller]
+  required_for: [post_deployment_end]
+  requires: [ext-net-vlan-configure-l3-controller]
+  parameters:
+    puppet_manifest: "puppet/manifests/create-floating-network.pp"
+    puppet_modules: "/etc/puppet/modules"
+    timeout: 300
